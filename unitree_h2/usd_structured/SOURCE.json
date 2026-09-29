@@ -1,0 +1,15 @@
+{
+  "asset": "robots/h2_description/H2_loop.xml",
+  "conversion": {
+    "converter": "mujoco-usd-converter==0.2.0",
+    "newton_adjustment": "Removed MjcEqualityConnectAPI from the six PhysicsSphericalJoint loop closures; retained physics:excludeFromArticulation, endpoints, and local anchors."
+  },
+  "imported_source": "Source/h2_import.usdc",
+  "imported_source_sha256": "6430b120b9ff215337f049dae3c474e36441bb791adac5a680895cad75ce1754",
+  "license": "BSD-3-Clause",
+  "loop_constraints": 6,
+  "repository": "https://github.com/unitreerobotics/unitree_ros",
+  "revision": "7d6075f7f58588b189b940130e3edab3c839b2df",
+  "pre_adjustment_usd_sha256": "c0bceb4548393b8ff13aacf11ce2901da1893bba6edbf69fd3371dfb1951f02b",
+  "structured_entrypoint": "h2.usda"
+}

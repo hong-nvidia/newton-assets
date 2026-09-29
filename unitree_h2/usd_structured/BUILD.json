@@ -1,0 +1,16 @@
+{
+  "source": "usd_structured/Source/h2_import.usdc",
+  "files": {
+    "Payload/Contents.usda": "e767844ef7f0c499c5ee20fbf6caf2b3ee2c3d722614fffaa1c8a1f8f0663270",
+    "Payload/Geometry.usda": "433188144fb9f47ab150626959c531030ae48713083218465ab3869e846e25dc",
+    "Payload/GeometryLibrary.usdc": "e0a63a0234b3f94b14076d968ee1264dcd366fb343cabcdf0b384934a8fd8404",
+    "Payload/Materials.usda": "73292cadb99e50def074023425ec98773e03834eaba24dcda53911450252c548",
+    "Payload/Mujoco.usda": "612e8c7b0fd14d45e2dfe9eb1c1d8af7ef980f1bef9cc1e72b75a8057e52ba6e",
+    "Payload/Physics.usda": "45df3885c8bd03fb27d703f03665a16dd2db32d756456a42eddce3008680bc88",
+    "Payload/Robot.usda": "51544b57105aa26c640785ce77826f1f7ba159298751cdbe7061da54265811b6",
+    "README.md": "227f8836e0a385dcb59dbabe0129fb2ca167cc57b474e185a755039149330623",
+    "SOURCE.json": "fa19815c6eb1269089035a24a3b7f84a7c5ea49dab1fdd001b12abe60ea570fc",
+    "Source/h2_import.usdc": "6430b120b9ff215337f049dae3c474e36441bb791adac5a680895cad75ce1754",
+    "h2.usda": "453069a32fd50ef308742df6e1d16d86d8e26545afb410d3049b3f87d4b79050"
+  }
+}
