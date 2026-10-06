@@ -23,13 +23,14 @@ MJCF model in the `unitree_ros` repository at revision
 
 The source was converted with
 [`mujoco-usd-converter`](https://github.com/newton-physics/mujoco-usd-converter)
-using its standard structured output and three small compatibility adjustments. For conversion,
+using its standard structured output and two small compatibility adjustments. For conversion,
 provenance, and asset-entrypoint details, see the
 [`usd_structured` README](usd_structured/README.md).
 
 ## Changelog
 
-- 2026-10-06: Switched to converter 0.5.0's standard nested structure and `H2Loop.usda` entrypoint. Retained collision guide geometry and default-import effort limits, removed the source floor, custom restructuring builder, and duplicate source archive, and added source/import/simulation verification.
+- 2026-10-06: Removed added USD drives; retain the original MuJoCo actuators and import effort limits with the explicit MuJoCo schema resolver.
+- 2026-10-06: Switched to converter 0.5.0's standard nested structure and `H2Loop.usda` entrypoint. Retained collision guide geometry, removed the source floor, custom restructuring builder, and duplicate source archive, and added source/import/simulation verification.
 - 2026-09-29: Added the structured Unitree H2 USD asset with six explicit
   Newton-compatible loop joints.
 

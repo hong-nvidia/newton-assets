@@ -52,8 +52,7 @@
     "command": "mujoco_usd_converter H2_loop.xml usd_structured",
     "adjustments": [
       "Remove the scene floor and its physics/material-binding specs, then refresh the cached asset bounds.",
-      "Mark collision-only geometry with purpose=guide.",
-      "Author zero-gain USD drives with maxForce matching symmetric joint effort limits."
+      "Mark collision-only geometry with purpose=guide."
     ],
     "postprocess": "python unitree_h2/tools/finalize_usd.py usd_structured"
   },

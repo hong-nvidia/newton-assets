@@ -1,6 +1,6 @@
 # Unitree H2 Closed-Loop Robot Simulation Asset
 
-This asset is the standard structured output of `mujoco-usd-converter==0.5.0`, with three small compatibility adjustments described below. Load [`H2Loop.usda`](H2Loop.usda), whose default prim is `/H2Loop`.
+This asset is the standard structured output of `mujoco-usd-converter==0.5.0`, with two small compatibility adjustments described below. Load [`H2Loop.usda`](H2Loop.usda), whose default prim is `/H2Loop`.
 
 The source is Unitree's [`robots/h2_description/H2_loop.xml`](https://github.com/unitreerobotics/unitree_ros/blob/7d6075f7f58588b189b940130e3edab3c839b2df/robots/h2_description/H2_loop.xml) at revision `7d6075f7f58588b189b940130e3edab3c839b2df`. It preserves the six ankle, knee, and waist linkage closures. Each closure retains the converter's `PhysicsSphericalJoint`, `physics:excludeFromArticulation = true`, and `MjcEqualityConnectAPI`; the tested Newton importer converts these to loop joints without removing the MuJoCo API.
 
@@ -23,9 +23,29 @@ Nested rigid bodies require OpenUSD 25.11 or newer for full support. There is no
 
 1. Remove the source scene's floor from the geometry, physics, and material-binding layers, and refresh the cached asset bounds. Consumers supply their own ground/environment.
 2. Mark collision-only geometry with `purpose = "guide"`. Collision prims and their physics properties stay intact, while visual prims keep their visibility and appearance.
-3. Author zero-gain USD drives whose `maxForce` preserves the source's symmetric joint effort limits in Newton's default import. These carry limits without prescribing a position controller or mixing passive damping with drive damping; they do not add MuJoCo actuators.
 
 The converter already authors `NewtonJointAPI`, armature, friction, and correctly scaled passive damping. Those attributes, the original MuJoCo joint dynamics and equality metadata, the nested transforms, and both shared libraries are left unchanged.
+
+## Newton import
+
+Select the MuJoCo resolver explicitly to preserve the authored joint effort limits, and register MuJoCo custom attributes before importing to retain the 31 original motors:
+
+```python
+import newton
+from newton.solvers import SolverMuJoCo
+from newton.usd import SchemaResolverMjc, SchemaResolverNewton
+
+builder = newton.ModelBuilder()
+SolverMuJoCo.register_custom_attributes(builder)
+builder.add_usd(
+    "unitree_h2/usd_structured/H2Loop.usda",
+    schema_resolvers=[SchemaResolverMjc(), SchemaResolverNewton()],
+)
+```
+
+The asset retains the converter's `MjcActuator` prims and has no added USD drives. The original torque motors use direct `control.mujoco.ctrl` inputs; passive joints remain unactuated by the asset. The generic importer defaults to the Newton resolver alone, which does not read `mjc:actuatorfrcrange`. Registering MuJoCo custom attributes does not select the MuJoCo resolver automatically; see [Newton's import documentation](https://github.com/newton-physics/newton/blob/a26fbb192c1397cacf06c45436e77be8cc9c2fd9/docs/solvers/mujoco.rst#L873).
+
+Newton [PR #4373](https://github.com/newton-physics/newton/pull/4373) fixed joint effort-limit resolution with `SchemaResolverMjc`. Use a Newton revision containing that fix, such as the revisions verified below.
 
 ## Reproduction
 
@@ -75,9 +95,9 @@ python unitree_h2/tools/validate_structured_usd.py --simulate --device cpu
 python unitree_h2/tools/validate_structured_usd.py --simulate --device cuda:0 --world-count 4
 ```
 
-The default-import check compares armature, passive damping, friction, and effort limits with the MuJoCo resolver. The ten-second smoke test uses the G1 example's import options, PD gains, six substeps/frame, and MuJoCo contacts. It checks finite body states, standing pelvis height, uprightness, and all six loop-anchor separations throughout the run. As in the G1 setup, it applies synthetic PD drives to passive DOFs; it does not validate a controller restricted to H2's 31 motors. The CPU backend supports one simulated world.
+The import check uses the explicit MuJoCo resolver, verifies all 35 joint effort limits, and checks that the 31 original motors retain direct MuJoCo control without introducing generic drives or actuation modes on passive joints. It compares armature, passive damping, friction, and effort limits with the MuJoCo-only resolver. The ten-second smoke test uses the G1 example's import options, PD gains, six substeps/frame, and MuJoCo contacts. It checks finite body states, standing pelvis height, uprightness, and all six loop-anchor separations throughout the run. As in the G1 setup, the smoke test adds synthetic PD drives to passive DOFs in memory; these are not authored in the asset, and the test does not validate a controller restricted to H2's 31 motors. The CPU backend supports one simulated world.
 
-Verified with Newton `3d437e20791c3114ec40b53ce478a7118a84eed7`, MuJoCo/MuJoCo-Warp 3.14.0, Warp 1.18.0, OpenUSD 26.5, and Newton USD schemas 0.5.0. The default-import CPU test stayed upright, settled at a pelvis height of 1.036 m, and measured a maximum loop-anchor error of 1.35 mm. Import without MuJoCo custom-attribute registration also retained all six ball loop joints. A fresh conversion plus the compatibility patch reproduced the package byte for byte. GPU execution and Newton-contact simulations were not verified because the host's GPU driver was unavailable.
+Verified with Newton `a26fbb192c1397cacf06c45436e77be8cc9c2fd9`, MuJoCo/MuJoCo-Warp 3.14.0, Warp 1.18.0, OpenUSD 26.5, and Newton USD schemas 0.5.0. The MuJoCo-resolved CPU test stayed upright, settled at a pelvis height of 1.036 m, and measured a maximum loop-anchor error of 1.35 mm. Import without MuJoCo custom-attribute registration also retained all six ball loop joints. A fresh conversion plus the compatibility patch reproduced the package byte for byte. GPU execution and Newton-contact simulations were not verified because the host's GPU driver was unavailable.
 
 ## License
 

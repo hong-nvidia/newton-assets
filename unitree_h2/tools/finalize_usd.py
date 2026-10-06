@@ -1,4 +1,4 @@
-"""Apply three H2 compatibility adjustments to standard converter output."""
+"""Remove the scene floor and mark collision guides in standard H2 output."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pxr import Gf, Usd, UsdGeom, UsdPhysics
 
 
 def finalize(package: Path) -> None:
-    """Remove the scene floor, mark collision guides, and preserve effort limits."""
+    """Remove the scene floor and mark collision guides."""
     stage = Usd.Stage.Open(str(package / "H2Loop.usda"))
     root = stage.GetDefaultPrim()
     floor = root.GetPath().AppendPath("Geometry/floor")
@@ -25,27 +25,6 @@ def finalize(package: Path) -> None:
         if prim.HasAPI(UsdPhysics.CollisionAPI) and UsdGeom.Imageable(prim):
             imageable = UsdGeom.Imageable(geometry.GetPrimAtPath(prim.GetPath()))
             imageable.CreatePurposeAttr(UsdGeom.Tokens.guide)
-        if not (
-            prim.IsA(UsdPhysics.RevoluteJoint) or prim.IsA(UsdPhysics.PrismaticJoint)
-        ):
-            continue
-        lower = prim.GetAttribute("mjc:actuatorfrcrange:min").Get()
-        upper = prim.GetAttribute("mjc:actuatorfrcrange:max").Get()
-        limited = prim.GetAttribute("mjc:actuatorfrclimited").Get()
-        if limited == "false" or lower is None or upper is None or lower >= upper:
-            continue
-        if lower != -upper:
-            raise ValueError(
-                f"Cannot preserve asymmetric effort range on {prim.GetPath()}"
-            )
-        drive_name = "linear" if prim.IsA(UsdPhysics.PrismaticJoint) else "angular"
-        drive = UsdPhysics.DriveAPI.Apply(
-            physics.GetPrimAtPath(prim.GetPath()), drive_name
-        )
-        drive.CreateTypeAttr(UsdPhysics.Tokens.force)
-        drive.CreateStiffnessAttr(0.0)
-        drive.CreateDampingAttr(0.0)
-        drive.CreateMaxForceAttr(upper)
 
     for layer_stage in (geometry, physics, materials):
         layer_stage.GetRootLayer().Save()

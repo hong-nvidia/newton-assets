@@ -47,6 +47,9 @@ def validate_package(package: Path, converted_source: Path | None = None) -> Non
             in loop.GetMetadata("apiSchemas").GetAddedOrExplicitItems()
         )
     for prim in stage.Traverse():
+        assert not any(
+            name.startswith("PhysicsDriveAPI:") for name in prim.GetAppliedSchemas()
+        ), f"H2 must retain its original MjcActuator actuation: {prim.GetPath()}"
         if prim.HasAPI(UsdPhysics.CollisionAPI) and UsdGeom.Imageable(prim):
             assert UsdGeom.Imageable(prim).ComputePurpose() == UsdGeom.Tokens.guide
         targets = [t for rel in prim.GetRelationships() for t in rel.GetTargets()]
@@ -119,8 +122,7 @@ def validate_package(package: Path, converted_source: Path | None = None) -> Non
             new_apis = runtime.GetMetadata("apiSchemas")
             old_names = set(old_apis.GetAddedOrExplicitItems()) if old_apis else set()
             new_names = set(new_apis.GetAddedOrExplicitItems()) if new_apis else set()
-            assert old_names <= new_names, prim.GetPath()
-            assert new_names - old_names <= {"PhysicsDriveAPI:angular"}, prim.GetPath()
+            assert old_names == new_names, prim.GetPath()
         for name in (
             "Payload/GeometryLibrary.usdc",
             "Payload/MaterialsLibrary.usdc",
@@ -235,7 +237,7 @@ def import_robot(
     """Import with the G1 example's configuration and selected schema resolver."""
     import newton
     import warp as wp
-    from newton.usd import SchemaResolverMjc
+    from newton.usd import SchemaResolverMjc, SchemaResolverNewton
 
     builder = newton.ModelBuilder()
     if register_mujoco:
@@ -247,7 +249,9 @@ def import_robot(
     builder.default_shape_cfg.kd = 2e2
     builder.default_shape_cfg.kf = 1e3
     builder.default_shape_cfg.mu = 0.75
-    kwargs = {"schema_resolvers": [SchemaResolverMjc()]} if mjc_only else {}
+    resolvers = [SchemaResolverMjc()]
+    if not mjc_only:
+        resolvers.append(SchemaResolverNewton())
     builder.add_usd(
         str(entrypoint),
         xform=wp.transform(wp.vec3(0, 0, 0.2)),
@@ -255,27 +259,39 @@ def import_robot(
         enable_self_collisions=False,
         hide_collision_shapes=True,
         skip_mesh_approximation=True,
-        **kwargs,
+        schema_resolvers=resolvers,
     )
     return builder
 
 
 def validate_import(package: Path):
-    """Compare the default import with independently resolved MuJoCo joint values."""
+    """Verify MuJoCo-resolved dynamics, effort limits, and original motor modes."""
     import newton
     import numpy as np
 
-    default = import_robot(package / "H2Loop.usda")
+    imported = import_robot(package / "H2Loop.usda")
     reference = import_robot(package / "H2Loop.usda", mjc_only=True)
     plain = import_robot(package / "H2Loop.usda", register_mujoco=False)
-    assert default.joint_label == reference.joint_label
-    assert default.joint_label == plain.joint_label
+    assert imported.joint_label == reference.joint_label
+    assert imported.joint_label == plain.joint_label
+    assert imported._custom_frequency_counts["mujoco:actuator"] == 31
+    ctrl_source = imported.custom_attributes["mujoco:ctrl_source"]
+    assert all(
+        (ctrl_source.default if value is None else value)
+        == int(newton.solvers.SolverMuJoCo.CtrlSource.CTRL_DIRECT)
+        for value in ctrl_source.values
+    ), "Original H2 motors must retain direct MuJoCo control"
+    for builder in (imported, reference, plain):
+        assert all(
+            mode == int(newton.JointTargetMode.NONE)
+            for mode in builder.joint_target_mode
+        ), "USD import must not introduce generic drives on active or passive joints"
     loops = [
         i for i, label in enumerate(plain.joint_label) if label.endswith("_connect")
     ]
     assert plain.body_count == 44 and len(loops) == 6
     assert all(plain.joint_type[i] == newton.JointType.BALL for i in loops)
-    assert all(body >= 0 for body in default.shape_body), (
+    assert all(body >= 0 for body in imported.shape_body), (
         "Asset must not import a static floor"
     )
     for name in (
@@ -285,56 +301,61 @@ def validate_import(package: Path):
         "joint_effort_limit",
     ):
         np.testing.assert_allclose(
-            getattr(default, name),
+            getattr(imported, name),
             getattr(reference, name),
             rtol=1e-6,
             atol=1e-9,
             err_msg=name,
         )
         np.testing.assert_allclose(
-            getattr(default, name),
+            getattr(imported, name),
             getattr(plain, name),
             rtol=1e-6,
             atol=1e-9,
             err_msg=name,
         )
     stage = Usd.Stage.Open(str(package / "H2Loop.usda"))
-    for index, label in enumerate(default.joint_label):
+    limited_joints = 0
+    for index, label in enumerate(imported.joint_label):
         prim = stage.GetPrimAtPath(label)
         if not prim or not prim.GetAttribute("mjc:armature").HasAuthoredValue():
             continue
-        start, end = default.joint_qd_start[index : index + 2]
+        start, end = imported.joint_qd_start[index : index + 2]
         np.testing.assert_allclose(
-            default.joint_armature[start:end],
+            imported.joint_armature[start:end],
             prim.GetAttribute("mjc:armature").Get(),
             rtol=1e-6,
         )
         np.testing.assert_allclose(
-            default.joint_damping[start:end],
+            imported.joint_damping[start:end],
             prim.GetAttribute("mjc:damping").Get(),
             rtol=1e-6,
         )
         np.testing.assert_allclose(
-            default.joint_friction[start:end],
+            imported.joint_friction[start:end],
             prim.GetAttribute("mjc:frictionloss").Get(),
             rtol=1e-6,
         )
-        limit = prim.GetAttribute("mjc:actuatorfrcrange:max").Get()
-        drive = UsdPhysics.DriveAPI(prim, "angular")
-        if limit is not None:
+        lower = prim.GetAttribute("mjc:actuatorfrcrange:min").Get()
+        upper = prim.GetAttribute("mjc:actuatorfrcrange:max").Get()
+        limited = prim.GetAttribute("mjc:actuatorfrclimited").Get()
+        if (
+            limited != "false"
+            and lower is not None
+            and upper is not None
+            and lower < upper
+        ):
             np.testing.assert_allclose(
-                default.joint_effort_limit[start:end], limit, rtol=1e-6
+                imported.joint_effort_limit[start:end],
+                max(abs(lower), abs(upper)),
+                rtol=1e-6,
             )
-            assert (
-                drive
-                and drive.GetStiffnessAttr().Get() == drive.GetDampingAttr().Get() == 0
-            )
-        else:
-            assert not drive
+            limited_joints += 1
+    assert limited_joints == 35
     print(
-        "PASS: default Newton import matches MuJoCo armature, passive damping, friction, and effort limits"
+        "PASS: explicit MuJoCo resolver preserves dynamics and all 35 effort limits; 31 direct-control motors, no generic drives or passive-joint actuation"
     )
-    return default
+    return imported
 
 
 def simulate(builder, world_count: int, device: str) -> None:
@@ -435,7 +456,9 @@ def main() -> None:
         default=Path(__file__).resolve().parents[1] / "usd_structured",
     )
     parser.add_argument(
-        "--newton", action="store_true", help="Also validate Newton's default import"
+        "--newton",
+        action="store_true",
+        help="Also validate MuJoCo-resolved Newton import",
     )
     parser.add_argument(
         "--simulate", action="store_true", help="Also run a ten-second posture test"
