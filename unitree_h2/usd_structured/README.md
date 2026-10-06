@@ -1,79 +1,83 @@
 # Unitree H2 Closed-Loop Robot Simulation Asset
 
-## Overview
+This asset is the standard structured output of `mujoco-usd-converter==0.5.0`, with three small compatibility adjustments described below. Load [`H2Loop.usda`](H2Loop.usda), whose default prim is `/H2Loop`.
 
-This package contains a simulation-ready, closed-loop [Unitree H2](https://www.unitree.com/) robot in Universal Scene Description (USD) format. The supported entrypoint is [`h2.usda`](h2.usda).
+The source is Unitree's [`robots/h2_description/H2_loop.xml`](https://github.com/unitreerobotics/unitree_ros/blob/7d6075f7f58588b189b940130e3edab3c839b2df/robots/h2_description/H2_loop.xml) at revision `7d6075f7f58588b189b940130e3edab3c839b2df`. It preserves the six ankle, knee, and waist linkage closures. Each closure retains the converter's `PhysicsSphericalJoint`, `physics:excludeFromArticulation = true`, and `MjcEqualityConnectAPI`; the tested Newton importer converts these to loop joints without removing the MuJoCo API.
 
-The model preserves six physical linkage closures in the ankles, knees, and waist. Each closure is a standard `PhysicsSphericalJoint` with `physics:excludeFromArticulation = true`, allowing Newton maximal-coordinate solvers, including VBD, to import the closures as loop joints.
+## Standard asset structure
 
-## Asset structure
+The package retains the converter's normal nested body hierarchy and layers, matching the other structured robot assets in this repository:
 
-The package follows the Isaac Sim asset-structure guidance:
+- `H2Loop.usda` is the lightweight asset interface, with the robot behind a payload.
+- `Payload/Contents.usda` composes the geometry, materials, and physics layers.
+- `Payload/Geometry.usda` contains the nested bodies and 59 mesh instances.
+- `Payload/GeometryLibrary.usdc` contains 38 shared mesh definitions, including shared entries for all 21 visual/collision pairs.
+- `Payload/Materials.usda` and `Payload/MaterialsLibrary.usdc` contain the converter's material definitions.
+- `Payload/Physics.usda` contains USD, Newton, and MuJoCo physics attributes, joints, and the original 31 actuators together.
 
-- `Source/h2_import.usdc` is the immutable imported source stage.
-- `Payload/GeometryLibrary.usdc` contains 38 shared mesh definitions for 59 mesh instances.
-- `Payload/Geometry.usda` contains the flattened body hierarchy and mesh instances, with transforms and appearance authored per instance. Collision-only shapes have `purpose = "guide"`, keeping them out of default-purpose rendering without removing their physics properties.
-- `Payload/Materials.usda` contains visual materials.
-- `Payload/Physics.usda` contains engine-neutral USD/Newton rigid bodies, collisions, joints, masses, and inertias.
-- `Payload/Mujoco.usda` contains MuJoCo-specific APIs, attributes, and actuators.
-- `Payload/Robot.usda` applies `IsaacRobotAPI` and enumerates robot links and joints.
-- `Payload/Contents.usda` composes the feature layers behind the payload in `h2.usda`.
+Nested rigid bodies require OpenUSD 25.11 or newer for full support. There is no custom flattened hierarchy, separate MuJoCo/Robot layer, or duplicate converted-source archive.
 
-Rigid bodies are direct children of `/H2/Geometry`, and joints are direct children of `/H2/Joints`. This keeps the simulation hierarchy flat while preserving source world transforms and joint endpoints.
+## Compatibility adjustments
 
-## Newton joint dynamics
+[`finalize_usd.py`](../tools/finalize_usd.py) applies only these changes to the normal CLI output:
 
-The Physics layer applies `NewtonJointAPI` and mirrors MuJoCo armature, friction, and passive damping, so the default `ModelBuilder.add_usd()` import preserves them without an explicit `SchemaResolverMjc`. Angular `newton:damping` is authored per degree (`mjc:damping * pi / 180`); Newton converts it back to per-radian SI damping during import. Passive damping is separate from drive damping.
+1. Remove the source scene's floor from the geometry, physics, and material-binding layers, and refresh the cached asset bounds. Consumers supply their own ground/environment.
+2. Mark collision-only geometry with `purpose = "guide"`. Collision prims and their physics properties stay intact, while visual prims keep their visibility and appearance.
+3. Author zero-gain USD drives whose `maxForce` preserves the source's symmetric joint effort limits in Newton's default import. These carry limits without prescribing a position controller or mixing passive damping with drive damping; they do not add MuJoCo actuators.
 
-Joints with upstream effort limits have zero-gain angular `PhysicsDriveAPI` drives whose `maxForce` preserves the symmetric joint effort limit. These carry torque limits without prescribing a position controller or adding passive damping through a drive. Joints without authored effort limits have no drives. The MuJoCo layer retains the original joint attributes and 31 actuators; authoring USD limits does not add MuJoCo motors.
+The converter already authors `NewtonJointAPI`, armature, friction, and correctly scaled passive damping. Those attributes, the original MuJoCo joint dynamics and equality metadata, the nested transforms, and both shared libraries are left unchanged.
 
-## Sources and reproducibility
+## Reproduction
 
-The source model is [`robots/h2_description/H2_loop.xml`](https://github.com/unitreerobotics/unitree_ros/blob/7d6075f7f58588b189b940130e3edab3c839b2df/robots/h2_description/H2_loop.xml) from Unitree's `unitree_ros` repository at revision `7d6075f7f58588b189b940130e3edab3c839b2df`.
-
-The source stage was converted with `mujoco-usd-converter==0.2.0`. Its six loop joints have `MjcEqualityConnectAPI` removed while retaining `physics:excludeFromArticulation`, endpoints, and anchors. No body, mass, inertia, collision, anchor, or tree-joint properties were changed. Source provenance is recorded in [`SOURCE.json`](SOURCE.json).
-
-Regenerate the structured layers with an environment that provides OpenUSD Python bindings:
+Use Python 3.12 and the pinned conversion dependencies:
 
 ```bash
-python unitree_h2/tools/build_structured_usd.py \
-  --source unitree_h2/usd_structured/Source/h2_import.usdc \
-  --output unitree_h2/usd_structured
+python3.12 -m venv /tmp/h2-conversion-env
+/tmp/h2-conversion-env/bin/python -m pip install -r unitree_h2/tools/conversion-requirements.txt
+
+git clone https://github.com/unitreerobotics/unitree_ros.git /tmp/unitree_ros
+git -C /tmp/unitree_ros checkout 7d6075f7f58588b189b940130e3edab3c839b2df
+
+/tmp/h2-conversion-env/bin/mujoco_usd_converter \
+  /tmp/unitree_ros/robots/h2_description/H2_loop.xml /tmp/h2-converted
+# Validate against this directory before finalizing if using --converted-source.
+/tmp/h2-conversion-env/bin/python unitree_h2/tools/finalize_usd.py /tmp/h2-converted
 ```
 
-`BUILD.json` records SHA-256 hashes for the generated package.
+Use `H2_loop.xml`, which includes the physical linkages. The standard converter keeps `/H2Loop` and `H2Loop.usda`; consumers of the earlier PR revision should update their old `h2.usda` entrypoint and `/H2` paths.
 
-### Archived source storage
+[`SOURCE.json`](SOURCE.json) records the pinned source, conversion versions, MJCF/mesh hashes, and hashes of the unmodified converter output. [`BUILD.json`](BUILD.json) records hashes of the checked-in package after the adjustments. The finalizer updates this manifest; after changing documentation or provenance, rerun it to refresh the hashes. Source availability is required for regeneration; the 5.67 MB duplicate source snapshot has been removed.
 
-The immutable `Source/h2_import.usdc` snapshot is intentionally retained as the exact input to the restructuring builder. It adds 5,670,697 bytes (about 5.67 MB) and includes geometry also present in the runtime library. Keeping it makes rebuilding independent of converter availability or changes to its dependencies; the pinned upstream MJCF and converter provenance remain recorded in `SOURCE.json`.
-
-This is an intentional storage cost for reproducibility. The runtime entrypoint does not reference or load the source snapshot, so it adds no robot bodies or simulated mass. Visual and collision instances share runtime mesh-library entries independently of this archive.
+The converter emits warnings that lights and the built-in checker texture are unsupported. Neither is needed for this robot asset; the scene floor is removed.
 
 ## Verification
 
-Validate source-property preservation, body placement, loop closures, geometry sharing, USD targets and composition, package hashes, and byte-for-byte regeneration with OpenUSD bindings:
+With OpenUSD bindings installed, validate composition, targets, hashes, nested structure, loop APIs, shared geometry, and collision purpose:
 
 ```bash
 python unitree_h2/tools/validate_structured_usd.py
 ```
 
-With Newton and its USD/MuJoCo import dependencies installed, also check that default-import armature, passive damping, friction, and effort limits match the MuJoCo resolver:
+For comparison with a fresh converter output, run the same converter command with `/tmp/h2-raw` as its output directory, without running the finalizer there. With MuJoCo installed, also verify source hashes, all body masses/inertia tensors/world poses, and loop endpoints/anchors against the pinned MJCF:
+
+```bash
+python unitree_h2/tools/validate_structured_usd.py \
+  --converted-source /tmp/h2-raw \
+  --mjcf /tmp/unitree_ros/robots/h2_description/H2_loop.xml
+```
+
+With Newton's USD import and simulation dependencies installed:
 
 ```bash
 python unitree_h2/tools/validate_structured_usd.py --newton
-```
-
-Run the ten-second posture smoke test with the G1 example's import options, PD gains, and six substeps per frame:
-
-```bash
 python unitree_h2/tools/validate_structured_usd.py --simulate --device cpu
 # On a CUDA-capable host:
 python unitree_h2/tools/validate_structured_usd.py --simulate --device cuda:0 --world-count 4
 ```
 
-The smoke test uses MuJoCo contacts and checks standing pelvis height, uprightness, finite body states, and all six loop-anchor separations throughout the run. It deliberately applies synthetic PD drives to passive DOFs as the G1 example does; it does not validate a controller restricted to H2's 31 motors. The CPU backend supports one simulated world.
+The default-import check compares armature, passive damping, friction, and effort limits with the MuJoCo resolver. The ten-second smoke test uses the G1 example's import options, PD gains, six substeps/frame, and MuJoCo contacts. It checks finite body states, standing pelvis height, uprightness, and all six loop-anchor separations throughout the run. As in the G1 setup, it applies synthetic PD drives to passive DOFs; it does not validate a controller restricted to H2's 31 motors. The CPU backend supports one simulated world.
 
-Verified with Newton `3d437e20791c3114ec40b53ce478a7118a84eed7`, MuJoCo/MuJoCo-Warp 3.14.0, Warp 1.18.0, OpenUSD 26.5, and Newton USD schemas 0.5.0. The default-import CPU smoke test retained all six loop constraints, settled at a pelvis height of 1.036 m, and measured a maximum loop-anchor error of 1.31 mm. The original asset under the same default-import test fell around four seconds and settled at 0.101 m; adding the MuJoCo resolver to the original asset produced the same standing result as the fixed default import. CUDA execution was not verified on the test host because its GPU driver was unavailable.
+Verified with Newton `3d437e20791c3114ec40b53ce478a7118a84eed7`, MuJoCo/MuJoCo-Warp 3.14.0, Warp 1.18.0, OpenUSD 26.5, and Newton USD schemas 0.5.0. The default-import CPU test stayed upright, settled at a pelvis height of 1.036 m, and measured a maximum loop-anchor error of 1.35 mm. Import without MuJoCo custom-attribute registration also retained all six ball loop joints. A fresh conversion plus the compatibility patch reproduced the package byte for byte. GPU execution and Newton-contact simulations were not verified because the host's GPU driver was unavailable.
 
 ## License
 

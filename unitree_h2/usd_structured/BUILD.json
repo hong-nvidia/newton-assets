@@ -1,16 +1,13 @@
 {
-  "source": "usd_structured/Source/h2_import.usdc",
   "files": {
-    "Payload/Contents.usda": "e767844ef7f0c499c5ee20fbf6caf2b3ee2c3d722614fffaa1c8a1f8f0663270",
-    "Payload/Geometry.usda": "d5c578720ecc17219b978a70f50c7f0f713124b3ac3eeba269a20e0aa7ee5706",
-    "Payload/GeometryLibrary.usdc": "24b04ce4e19b27510de89b446fc1e4e8df7273f2fa0d9e7884bf5ef66370654f",
-    "Payload/Materials.usda": "73292cadb99e50def074023425ec98773e03834eaba24dcda53911450252c548",
-    "Payload/Mujoco.usda": "612e8c7b0fd14d45e2dfe9eb1c1d8af7ef980f1bef9cc1e72b75a8057e52ba6e",
-    "Payload/Physics.usda": "7c97cc9afec12bbaadda09b886d8c0eafc6965577b4cf577521403300b57c852",
-    "Payload/Robot.usda": "51544b57105aa26c640785ce77826f1f7ba159298751cdbe7061da54265811b6",
-    "README.md": "7fc9a788bc0e86215ec86ca9ef3ec6bb2fb38afff0cc885b6661408f288a211e",
-    "SOURCE.json": "fa19815c6eb1269089035a24a3b7f84a7c5ea49dab1fdd001b12abe60ea570fc",
-    "Source/h2_import.usdc": "6430b120b9ff215337f049dae3c474e36441bb791adac5a680895cad75ce1754",
-    "h2.usda": "453069a32fd50ef308742df6e1d16d86d8e26545afb410d3049b3f87d4b79050"
+    "H2Loop.usda": "d8db99b71a5f42240d617fd1a2c7962d84dc1dd6be6421a8d30264fe4ada8217",
+    "Payload/Contents.usda": "7b13e0d7fedd2354e2fc72e4a03eeac23fb10b3e93835719aab51076ab4d1b5f",
+    "Payload/Geometry.usda": "d9f43b31951a05b0b2b0d665d7abbbfbe29e04e2c7d2e9c1dde69654d8915150",
+    "Payload/GeometryLibrary.usdc": "bdc9d958f3970282b03b4698ab8e29fe855d21f1fef58b02b3586b8126aa4b6d",
+    "Payload/Materials.usda": "b7fe88dbc0ee17b1c1407ba806815f61c747102d346f216322ea2c0626a7935c",
+    "Payload/MaterialsLibrary.usdc": "0c7033909ad26854098979f9015d23b9b8da3dab6769fc7c773f1ff8d64fc439",
+    "Payload/Physics.usda": "2ccb4bb2a099e2b49f9c7b569c5d24d7562806bbe7801681ab6855eb53bafa44",
+    "README.md": "1657b8080930048798bc3b99bc1a386a5e097644855b47db64722a9913c1aa84",
+    "SOURCE.json": "7a579ef265fa70f4396f2c9039e5b2bbed28decd4b96ebf7aa1d808704128124"
   }
 }

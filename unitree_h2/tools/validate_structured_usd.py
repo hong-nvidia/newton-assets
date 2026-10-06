@@ -1,4 +1,4 @@
-"""Validate the H2 package against its source, optionally importing and simulating it."""
+"""Validate the standard H2 conversion, source fidelity, and Newton simulation."""
 
 from __future__ import annotations
 
@@ -6,31 +6,20 @@ import argparse
 import hashlib
 import json
 import math
-import shutil
-import tempfile
 from pathlib import Path
 
-from build_structured_usd import _flatten_bodies_and_joints, build
 from pxr import Gf, Usd, UsdGeom, UsdPhysics
 
 
-def validate_package(package: Path) -> None:
-    """Check preservation, geometry sharing, USD composition, hashes, and rebuilding."""
-    source_path = package / "Source/h2_import.usdc"
-    source = Usd.Stage.Open(str(source_path))
-    stage = Usd.Stage.Open(str(package / "h2.usda"))
+def validate_package(package: Path, converted_source: Path | None = None) -> None:
+    """Check USD composition, sharing, compatibility edits, and package hashes."""
+    stage = Usd.Stage.Open(str(package / "H2Loop.usda"))
     assert stage and not stage.GetCompositionErrors(), "USD composition failed"
-    assert str(stage.GetDefaultPrim().GetPath()) == "/H2"
-    assert source_path.resolve() not in {
-        Path(layer.realPath).resolve()
-        for layer in stage.GetUsedLayers()
-        if layer.realPath
-    }
-    provenance = json.loads((package / "SOURCE.json").read_text())
-    assert (
-        hashlib.sha256(source_path.read_bytes()).hexdigest()
-        == provenance["imported_source_sha256"]
-    )
+    assert str(stage.GetDefaultPrim().GetPath()) == "/H2Loop"
+    assert not stage.GetPrimAtPath("/H2Loop/Geometry/floor")
+    assert not (package / "Source").exists(), "No duplicate source archive is needed"
+    assert not (package / "Payload/Mujoco.usda").exists()
+    assert not (package / "Payload/Robot.usda").exists()
     manifest = json.loads((package / "BUILD.json").read_text())
     assert set(manifest["files"]) == {
         p.relative_to(package).as_posix()
@@ -39,20 +28,12 @@ def validate_package(package: Path) -> None:
     }
     for name, digest in manifest["files"].items():
         assert hashlib.sha256((package / name).read_bytes()).hexdigest() == digest, name
-
-    # Check world placement against the nested source, independently of normalization.
-    source_cache, runtime_cache = UsdGeom.XformCache(), UsdGeom.XformCache()
-    bodies = [p for p in source.Traverse() if p.HasAPI(UsdPhysics.RigidBodyAPI)]
-    assert len(bodies) == 44
     assert sum(p.HasAPI(UsdPhysics.RigidBodyAPI) for p in stage.Traverse()) == 44
-    for body in bodies:
-        runtime_body = stage.GetPrimAtPath("/H2/Geometry/" + body.GetName())
-        assert Gf.IsClose(
-            source_cache.GetLocalToWorldTransform(body),
-            runtime_cache.GetLocalToWorldTransform(runtime_body),
-            1e-10,
-        ), body.GetName()
     assert sum(p.GetTypeName() == "MjcActuator" for p in stage.Traverse()) == 31
+    # Confirm the normal nested body layout, rather than a flattened namespace.
+    assert stage.GetPrimAtPath(
+        "/H2Loop/Geometry/pelvis/left_hip_pitch_link/left_hip_roll_link"
+    )
     loops = [
         p
         for p in stage.Traverse()
@@ -60,6 +41,11 @@ def validate_package(package: Path) -> None:
         and p.GetAttribute("physics:excludeFromArticulation").Get()
     ]
     assert len(loops) == 6
+    for loop in loops:
+        assert (
+            "MjcEqualityConnectAPI"
+            in loop.GetMetadata("apiSchemas").GetAddedOrExplicitItems()
+        )
     for prim in stage.Traverse():
         if prim.HasAPI(UsdPhysics.CollisionAPI) and UsdGeom.Imageable(prim):
             assert UsdGeom.Imageable(prim).ComputePurpose() == UsdGeom.Tokens.guide
@@ -67,51 +53,59 @@ def validate_package(package: Path) -> None:
         targets += [t for attr in prim.GetAttributes() for t in attr.GetConnections()]
         for target in targets:
             assert stage.GetObjectAtPath(target), (prim.GetPath(), target)
-
     library = Usd.Stage.Open(str(package / "Payload/GeometryLibrary.usdc"))
-    assert sum(p.IsA(UsdGeom.Mesh) for p in library.Traverse()) == 38
+    assert sum(p.IsA(UsdGeom.Mesh) for p in library.TraverseAll()) == 38
     meshes = [p for p in stage.Traverse() if p.IsA(UsdGeom.Mesh)]
     assert len(meshes) == 59
     collision_pairs = 0
     for mesh in meshes:
         if not mesh.HasAPI(UsdPhysics.CollisionAPI):
             continue
-        assert UsdGeom.Imageable(mesh).ComputePurpose() == UsdGeom.Tokens.guide
         visual = mesh.GetParent().GetChild(mesh.GetName().removesuffix("_1"))
-        if visual and visual != mesh and visual.IsA(UsdGeom.Mesh):
-            assert not visual.HasAPI(UsdPhysics.CollisionAPI)
-            assert UsdGeom.Imageable(visual).ComputePurpose() == UsdGeom.Tokens.default_
-            assert mesh.GetMetadata("references") == visual.GetMetadata("references")
-            collision_pairs += 1
+        assert visual and visual != mesh and visual.IsA(UsdGeom.Mesh)
+        assert not visual.HasAPI(UsdPhysics.CollisionAPI)
+        assert UsdGeom.Imageable(visual).ComputePurpose() == UsdGeom.Tokens.default_
+        assert mesh.GetMetadata("references") == visual.GetMetadata("references")
+        collision_pairs += 1
     assert collision_pairs == 21
+    bounds = (
+        UsdGeom.BBoxCache(
+            Usd.TimeCode.Default(), [UsdGeom.Tokens.default_, UsdGeom.Tokens.guide]
+        )
+        .ComputeWorldBound(stage.GetDefaultPrim())
+        .ComputeAlignedBox()
+    )
+    low, high = stage.GetDefaultPrim().GetAttribute("extentsHint").Get()
+    assert Gf.IsClose(low, Gf.Vec3f(bounds.GetMin()), 1e-5) and Gf.IsClose(
+        high, Gf.Vec3f(bounds.GetMax()), 1e-5
+    )
+    print(
+        "PASS: standard nested layout; 44 bodies, six equality loop closures, 31 actuators; 59 instances / 38 meshes / 21 shared pairs; no floor or archive; hashes and USD composition"
+    )
 
-    with tempfile.TemporaryDirectory(prefix="h2-validation-") as temp:
-        normalized = _flatten_bodies_and_joints(source_path, Path(temp) / "source.usda")
-        # Compare every original attribute and relationship, including topology,
-        # appearance, joint anchors, masses, inertia, and collision properties.
-        for prim in normalized.Traverse():
-            if str(prim.GetPath()).startswith("/Flattened_Prototype"):
+    if converted_source is not None:
+        provenance = json.loads((package / "SOURCE.json").read_text())
+        for name, digest in provenance["raw_usd_sha256"].items():
+            assert (
+                hashlib.sha256((converted_source / name).read_bytes()).hexdigest()
+                == digest
+            ), name
+        source = Usd.Stage.Open(str(converted_source / "H2Loop.usda"))
+        removed = "/H2Loop/Geometry/floor"
+        assert {p.GetPath() for p in stage.Traverse()} == {
+            p.GetPath() for p in source.Traverse() if str(p.GetPath()) != removed
+        }
+        # Every original authored attribute, relationship, and API survives,
+        # except floor specs, collision purpose, and refreshed cached bounds.
+        for prim in source.Traverse():
+            if str(prim.GetPath()) == removed:
                 continue
             runtime = stage.GetPrimAtPath(prim.GetPath())
-            assert runtime, prim.GetPath()
+            assert runtime.GetTypeName() == prim.GetTypeName(), prim.GetPath()
             for attr in prim.GetAuthoredAttributes():
-                if attr.GetName() == "extentsHint":
-                    # The entrypoint recomputes the converter's cached bounds.
-                    bounds = (
-                        UsdGeom.BBoxCache(
-                            Usd.TimeCode.Default(), [UsdGeom.Tokens.default_]
-                        )
-                        .ComputeWorldBound(runtime)
-                        .ComputeAlignedBox()
-                    )
-                    low, high = runtime.GetAttribute(attr.GetName()).Get()
-                    assert all(
-                        low[i] <= bounds.GetMin()[i] + 1e-5
-                        and high[i] >= bounds.GetMax()[i] - 1e-5
-                        for i in range(3)
-                    )
-                    continue
-                if attr.GetName() == "purpose" and prim.HasAPI(UsdPhysics.CollisionAPI):
+                if attr.GetName() == "extentsHint" or (
+                    attr.GetName() == "purpose" and prim.HasAPI(UsdPhysics.CollisionAPI)
+                ):
                     continue
                 assert attr.Get() == runtime.GetAttribute(attr.GetName()).Get(), (
                     attr.GetPath()
@@ -121,24 +115,131 @@ def validate_package(package: Path) -> None:
                     rel.GetTargets()
                     == runtime.GetRelationship(rel.GetName()).GetTargets()
                 ), rel.GetPath()
-        rebuilt = Path(temp) / "package"
-        shutil.copytree(package, rebuilt)
-        build(rebuilt / "Source/h2_import.usdc", rebuilt)
-        for name in manifest["files"]:
-            assert (package / name).read_bytes() == (rebuilt / name).read_bytes(), name
+            old_apis = prim.GetMetadata("apiSchemas")
+            new_apis = runtime.GetMetadata("apiSchemas")
+            old_names = set(old_apis.GetAddedOrExplicitItems()) if old_apis else set()
+            new_names = set(new_apis.GetAddedOrExplicitItems()) if new_apis else set()
+            assert old_names <= new_names, prim.GetPath()
+            assert new_names - old_names <= {"PhysicsDriveAPI:angular"}, prim.GetPath()
+        for name in (
+            "Payload/GeometryLibrary.usdc",
+            "Payload/MaterialsLibrary.usdc",
+            "Payload/Contents.usda",
+        ):
+            assert (package / name).read_bytes() == (
+                converted_source / name
+            ).read_bytes(), name
+        print(
+            "PASS: fresh converter hashes match; original attributes, targets, APIs, hierarchy, and shared libraries preserved"
+        )
+
+
+def validate_mjcf(package: Path, mjcf: Path) -> None:
+    """Compare robot mass, inertia, body placement, and anchors to pinned MJCF."""
+    import mujoco
+    import numpy as np
+
+    provenance = json.loads((package / "SOURCE.json").read_text())
+    assert (
+        hashlib.sha256(mjcf.read_bytes()).hexdigest()
+        == provenance["source_mjcf_sha256"]
+    )
+    for name, digest in provenance["mesh_files_sha256"].items():
+        assert (
+            hashlib.sha256((mjcf.parent / name).read_bytes()).hexdigest() == digest
+        ), name
+    model = mujoco.MjModel.from_xml_path(str(mjcf))
+    data = mujoco.MjData(model)
+    mujoco.mj_forward(model, data)
+    stage = Usd.Stage.Open(str(package / "H2Loop.usda"))
+    bodies = {
+        p.GetName(): p for p in stage.Traverse() if p.HasAPI(UsdPhysics.RigidBodyAPI)
+    }
+    assert model.nbody - 1 == len(bodies) == 44
+    cache = UsdGeom.XformCache()
+
+    def rotation(quaternion):
+        matrix = np.empty(9)
+        mujoco.mju_quat2Mat(matrix, np.asarray(quaternion, dtype=float))
+        return matrix.reshape(3, 3)
+
+    for i in range(1, model.nbody):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, i)
+        prim = bodies[name]
+        world = cache.GetLocalToWorldTransform(prim)
+        np.testing.assert_allclose(
+            world.ExtractTranslation(), data.xpos[i], atol=1e-6, rtol=0
+        )
+        np.testing.assert_allclose(
+            # quatf transforms evaluated by OpenUSD differ from MuJoCo by
+            # up to 9e-6 for the converter's near-identity waist rotations.
+            np.asarray(world)[:3, :3].T,
+            rotation(data.xquat[i]),
+            atol=1e-5,
+            rtol=0,
+        )
+        mass = UsdPhysics.MassAPI(prim)
+        np.testing.assert_allclose(
+            mass.GetMassAttr().Get(), model.body_mass[i], rtol=1e-6
+        )
+        np.testing.assert_allclose(
+            mass.GetCenterOfMassAttr().Get(), model.body_ipos[i], atol=1e-6
+        )
+        principal = mass.GetPrincipalAxesAttr().Get()
+        usd_rotation = rotation([principal.GetReal(), *principal.GetImaginary()])
+        mjc_rotation = rotation(model.body_iquat[i])
+        usd_inertia = (
+            usd_rotation @ np.diag(mass.GetDiagonalInertiaAttr().Get()) @ usd_rotation.T
+        )
+        mjc_inertia = mjc_rotation @ np.diag(model.body_inertia[i]) @ mjc_rotation.T
+        np.testing.assert_allclose(usd_inertia, mjc_inertia, atol=1e-7, rtol=1e-5)
+    loops = {
+        p.GetName(): p
+        for p in stage.Traverse()
+        if p.IsA(UsdPhysics.Joint)
+        and p.GetAttribute("physics:excludeFromArticulation").Get()
+    }
+    assert model.neq == len(loops) == 6
+    for i in range(model.neq):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_EQUALITY, i)
+        joint = UsdPhysics.Joint(loops[name])
+        assert model.eq_type[i] == mujoco.mjtEq.mjEQ_CONNECT
+        assert joint.GetBody0Rel().GetTargets() == [
+            bodies[
+                mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_BODY, int(model.eq_obj1id[i])
+                )
+            ].GetPath()
+        ]
+        assert joint.GetBody1Rel().GetTargets() == [
+            bodies[
+                mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_BODY, int(model.eq_obj2id[i])
+                )
+            ].GetPath()
+        ]
+        np.testing.assert_allclose(
+            joint.GetLocalPos0Attr().Get(), model.eq_data[i, :3], atol=1e-6, rtol=0
+        )
+        np.testing.assert_allclose(
+            joint.GetLocalPos1Attr().Get(), model.eq_data[i, 3:6], atol=1e-6, rtol=0
+        )
     print(
-        "PASS: source properties and 44 body transforms preserved; six loops and 31 actuators; 59 instances / 38 meshes / 21 shared pairs; hashes, targets, composition, and byte-for-byte rebuild"
+        "PASS: pinned MJCF and meshes match; all 44 masses, inertia tensors, body poses, and six loop endpoints/anchors preserved"
     )
 
 
-def import_robot(entrypoint: Path, *, mjc_only: bool = False):
+def import_robot(
+    entrypoint: Path, *, mjc_only: bool = False, register_mujoco: bool = True
+):
     """Import with the G1 example's configuration and selected schema resolver."""
     import newton
     import warp as wp
     from newton.usd import SchemaResolverMjc
 
     builder = newton.ModelBuilder()
-    newton.solvers.SolverMuJoCo.register_custom_attributes(builder)
+    if register_mujoco:
+        newton.solvers.SolverMuJoCo.register_custom_attributes(builder)
     builder.default_joint_cfg = newton.ModelBuilder.JointDofConfig(
         limit_ke=1e3, limit_kd=1e1, friction=1e-5
     )
@@ -161,11 +262,22 @@ def import_robot(entrypoint: Path, *, mjc_only: bool = False):
 
 def validate_import(package: Path):
     """Compare the default import with independently resolved MuJoCo joint values."""
+    import newton
     import numpy as np
 
-    default = import_robot(package / "h2.usda")
-    reference = import_robot(package / "h2.usda", mjc_only=True)
+    default = import_robot(package / "H2Loop.usda")
+    reference = import_robot(package / "H2Loop.usda", mjc_only=True)
+    plain = import_robot(package / "H2Loop.usda", register_mujoco=False)
     assert default.joint_label == reference.joint_label
+    assert default.joint_label == plain.joint_label
+    loops = [
+        i for i, label in enumerate(plain.joint_label) if label.endswith("_connect")
+    ]
+    assert plain.body_count == 44 and len(loops) == 6
+    assert all(plain.joint_type[i] == newton.JointType.BALL for i in loops)
+    assert all(body >= 0 for body in default.shape_body), (
+        "Asset must not import a static floor"
+    )
     for name in (
         "joint_armature",
         "joint_damping",
@@ -179,7 +291,14 @@ def validate_import(package: Path):
             atol=1e-9,
             err_msg=name,
         )
-    stage = Usd.Stage.Open(str(package / "h2.usda"))
+        np.testing.assert_allclose(
+            getattr(default, name),
+            getattr(plain, name),
+            rtol=1e-6,
+            atol=1e-9,
+            err_msg=name,
+        )
+    stage = Usd.Stage.Open(str(package / "H2Loop.usda"))
     for index, label in enumerate(default.joint_label):
         prim = stage.GetPrimAtPath(label)
         if not prim or not prim.GetAttribute("mjc:armature").HasAuthoredValue():
@@ -322,6 +441,16 @@ def main() -> None:
         "--simulate", action="store_true", help="Also run a ten-second posture test"
     )
     parser.add_argument("--device", default="cpu")
+    parser.add_argument(
+        "--converted-source",
+        type=Path,
+        help="Compare with a fresh, unmodified converter output",
+    )
+    parser.add_argument(
+        "--mjcf",
+        type=Path,
+        help="Verify physical properties against the pinned upstream MJCF and meshes",
+    )
     parser.add_argument("--world-count", type=int, default=1)
     args = parser.parse_args()
     if args.world_count < 1:
@@ -330,7 +459,9 @@ def main() -> None:
         parser.error(
             "Newton's native MuJoCo CPU backend simulates one world; use --world-count 1 or a CUDA device"
         )
-    validate_package(args.package.resolve())
+    validate_package(args.package.resolve(), args.converted_source)
+    if args.mjcf:
+        validate_mjcf(args.package.resolve(), args.mjcf.resolve())
     if args.newton or args.simulate:
         import warp as wp
 

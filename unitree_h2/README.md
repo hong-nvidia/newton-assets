@@ -8,7 +8,7 @@ This package contains a structured USD simulation asset for the
 
 The subfolders contain:
 
-- **tools**: Script for reproducibly generating the structured USD layers.
+- **tools**: Pinned conversion dependencies, a small compatibility patch, and validation checks.
 - **usd_structured**: Simulation-ready USD layers preserving the H2 ankle,
   knee, and waist linkage closures.
 
@@ -23,13 +23,13 @@ MJCF model in the `unitree_ros` repository at revision
 
 The source was converted with
 [`mujoco-usd-converter`](https://github.com/newton-physics/mujoco-usd-converter)
-and reorganized into reviewable structured USD layers. For conversion,
+using its standard structured output and three small compatibility adjustments. For conversion,
 provenance, and asset-entrypoint details, see the
 [`usd_structured` README](usd_structured/README.md).
 
 ## Changelog
 
-- 2026-10-06: Preserved joint dynamics and motor effort limits in Newton's default USD import, shared visual/collision mesh definitions, marked collision-only geometry as guides, and documented the source snapshot storage tradeoff.
+- 2026-10-06: Switched to converter 0.5.0's standard nested structure and `H2Loop.usda` entrypoint. Retained collision guide geometry and default-import effort limits, removed the source floor, custom restructuring builder, and duplicate source archive, and added source/import/simulation verification.
 - 2026-09-29: Added the structured Unitree H2 USD asset with six explicit
   Newton-compatible loop joints.
 

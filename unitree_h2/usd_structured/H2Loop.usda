@@ -1,18 +1,18 @@
 #usda 1.0
 (
     customLayerData = {
-        string creator = "unitree_h2/tools/build_structured_usd.py"
+        string creator = "MuJoCo USD Converter v0.5.0"
     }
-    defaultPrim = "H2"
+    defaultPrim = "H2Loop"
     kilogramsPerUnit = 1
     metersPerUnit = 1
     upAxis = "Z"
 )
 
-def Xform "H2" (
+def Xform "H2Loop" (
     prepend apiSchemas = ["GeomModelAPI"]
     assetInfo = {
-        string name = "H2"
+        string name = "H2Loop"
     }
     kind = "component"
     prepend payload = @./Payload/Contents.usda@

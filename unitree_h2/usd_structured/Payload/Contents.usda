@@ -1,14 +1,12 @@
 #usda 1.0
 (
     customLayerData = {
-        string creator = "unitree_h2/tools/build_structured_usd.py"
+        string creator = "MuJoCo USD Converter v0.5.0"
     }
-    defaultPrim = "H2"
+    defaultPrim = "H2Loop"
     kilogramsPerUnit = 1
     metersPerUnit = 1
     subLayers = [
-        @./Robot.usda@,
-        @./Mujoco.usda@,
         @./Physics.usda@,
         @./Materials.usda@,
         @./Geometry.usda@
@@ -16,9 +14,7 @@
     upAxis = "Z"
 )
 
-def Xform "H2" (
-    kind = "component"
-)
+def Xform "H2Loop"
 {
 }
 
