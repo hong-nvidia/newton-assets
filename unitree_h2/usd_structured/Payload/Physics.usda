@@ -15,8 +15,17 @@ def Xform "H2" (
 {
     def Scope "Joints"
     {
-        def PhysicsRevoluteJoint "left_wrist_yaw_joint"
+        def PhysicsRevoluteJoint "left_wrist_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 10
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/left_wrist_pitch_link>
             rel physics:body1 = </H2/Geometry/left_wrist_yaw_link>
@@ -28,8 +37,17 @@ def Xform "H2" (
             float physics:upperLimit = 69.90085
         }
 
-        def PhysicsRevoluteJoint "right_wrist_yaw_joint"
+        def PhysicsRevoluteJoint "right_wrist_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 10
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/right_wrist_pitch_link>
             rel physics:body1 = </H2/Geometry/right_wrist_yaw_link>
@@ -41,8 +59,17 @@ def Xform "H2" (
             float physics:upperLimit = 69.90085
         }
 
-        def PhysicsRevoluteJoint "left_wrist_pitch_joint"
+        def PhysicsRevoluteJoint "left_wrist_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 10
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/left_wrist_roll_link>
             rel physics:body1 = </H2/Geometry/left_wrist_pitch_link>
@@ -54,8 +81,17 @@ def Xform "H2" (
             float physics:upperLimit = 33.00237
         }
 
-        def PhysicsRevoluteJoint "right_wrist_pitch_joint"
+        def PhysicsRevoluteJoint "right_wrist_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 10
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/right_wrist_roll_link>
             rel physics:body1 = </H2/Geometry/right_wrist_pitch_link>
@@ -67,8 +103,17 @@ def Xform "H2" (
             float physics:upperLimit = 33.00237
         }
 
-        def PhysicsRevoluteJoint "left_wrist_roll_joint"
+        def PhysicsRevoluteJoint "left_wrist_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/left_elbow_link>
             rel physics:body1 = </H2/Geometry/left_wrist_roll_link>
@@ -80,8 +125,17 @@ def Xform "H2" (
             float physics:upperLimit = 150.00035
         }
 
-        def PhysicsRevoluteJoint "right_wrist_roll_joint"
+        def PhysicsRevoluteJoint "right_wrist_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/right_elbow_link>
             rel physics:body1 = </H2/Geometry/right_wrist_roll_link>
@@ -93,8 +147,17 @@ def Xform "H2" (
             float physics:upperLimit = 150.00035
         }
 
-        def PhysicsRevoluteJoint "left_elbow_joint"
+        def PhysicsRevoluteJoint "left_elbow_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/left_shoulder_yaw_link>
             rel physics:body1 = </H2/Geometry/left_elbow_link>
@@ -106,8 +169,17 @@ def Xform "H2" (
             float physics:upperLimit = 175.95534
         }
 
-        def PhysicsRevoluteJoint "right_elbow_joint"
+        def PhysicsRevoluteJoint "right_elbow_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/right_shoulder_yaw_link>
             rel physics:body1 = </H2/Geometry/right_elbow_link>
@@ -119,8 +191,17 @@ def Xform "H2" (
             float physics:upperLimit = 175.95534
         }
 
-        def PhysicsRevoluteJoint "left_ankle_pitch_joint"
+        def PhysicsRevoluteJoint "left_ankle_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 66.88
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/left_ankle_roll_link>
             rel physics:body1 = </H2/Geometry/left_ankle_pitch_link>
@@ -132,8 +213,13 @@ def Xform "H2" (
             float physics:upperLimit = 34.999985
         }
 
-        def PhysicsSphericalJoint "left_ankle_loop_rod_joint"
+        def PhysicsSphericalJoint "left_ankle_loop_rod_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0017453292
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/left_ankle_A_link>
             rel physics:body1 = </H2/Geometry/left_ankle_loop_rod>
@@ -143,8 +229,17 @@ def Xform "H2" (
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsRevoluteJoint "right_ankle_pitch_joint"
+        def PhysicsRevoluteJoint "right_ankle_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 66.88
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/right_ankle_roll_link>
             rel physics:body1 = </H2/Geometry/right_ankle_pitch_link>
@@ -156,8 +251,13 @@ def Xform "H2" (
             float physics:upperLimit = 34.999985
         }
 
-        def PhysicsSphericalJoint "right_ankle_loop_rod_joint"
+        def PhysicsSphericalJoint "right_ankle_loop_rod_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0017453292
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/right_ankle_A_link>
             rel physics:body1 = </H2/Geometry/right_ankle_loop_rod>
@@ -167,8 +267,17 @@ def Xform "H2" (
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsRevoluteJoint "left_shoulder_yaw_joint"
+        def PhysicsRevoluteJoint "left_shoulder_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/left_shoulder_roll_link>
             rel physics:body1 = </H2/Geometry/left_shoulder_yaw_link>
@@ -180,8 +289,17 @@ def Xform "H2" (
             float physics:upperLimit = 150.00035
         }
 
-        def PhysicsRevoluteJoint "right_shoulder_yaw_joint"
+        def PhysicsRevoluteJoint "right_shoulder_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/right_shoulder_roll_link>
             rel physics:body1 = </H2/Geometry/right_shoulder_yaw_link>
@@ -193,8 +311,17 @@ def Xform "H2" (
             float physics:upperLimit = 150.00035
         }
 
-        def PhysicsRevoluteJoint "left_ankle_roll_joint"
+        def PhysicsRevoluteJoint "left_ankle_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 19
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/left_knee_link>
             rel physics:body1 = </H2/Geometry/left_ankle_roll_link>
@@ -206,8 +333,17 @@ def Xform "H2" (
             float physics:upperLimit = 17.000002
         }
 
-        def PhysicsRevoluteJoint "left_ankle_A_joint"
+        def PhysicsRevoluteJoint "left_ankle_A_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 105.6
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/left_knee_link>
             rel physics:body1 = </H2/Geometry/left_ankle_A_link>
@@ -219,8 +355,13 @@ def Xform "H2" (
             float physics:upperLimit = 114.59156
         }
 
-        def PhysicsSphericalJoint "left_knee_loop_rod_joint"
+        def PhysicsSphericalJoint "left_knee_loop_rod_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0017453292
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/left_knee_motor_link>
             rel physics:body1 = </H2/Geometry/left_knee_loop_rod>
@@ -230,8 +371,17 @@ def Xform "H2" (
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsRevoluteJoint "right_ankle_roll_joint"
+        def PhysicsRevoluteJoint "right_ankle_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 19
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/right_knee_link>
             rel physics:body1 = </H2/Geometry/right_ankle_roll_link>
@@ -243,8 +393,17 @@ def Xform "H2" (
             float physics:upperLimit = 20.000008
         }
 
-        def PhysicsRevoluteJoint "right_ankle_A_joint"
+        def PhysicsRevoluteJoint "right_ankle_A_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 105.6
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/right_knee_link>
             rel physics:body1 = </H2/Geometry/right_ankle_A_link>
@@ -256,8 +415,13 @@ def Xform "H2" (
             float physics:upperLimit = 114.59156
         }
 
-        def PhysicsSphericalJoint "right_knee_loop_rod_joint"
+        def PhysicsSphericalJoint "right_knee_loop_rod_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0017453292
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/right_knee_motor_link>
             rel physics:body1 = </H2/Geometry/right_knee_loop_rod>
@@ -267,8 +431,17 @@ def Xform "H2" (
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsRevoluteJoint "head_yaw_joint"
+        def PhysicsRevoluteJoint "head_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 50
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/head_pitch_link>
             rel physics:body1 = </H2/Geometry/head_yaw_link>
@@ -280,8 +453,17 @@ def Xform "H2" (
             float physics:upperLimit = 99.99832
         }
 
-        def PhysicsRevoluteJoint "left_shoulder_roll_joint"
+        def PhysicsRevoluteJoint "left_shoulder_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/left_shoulder_pitch_link>
             rel physics:body1 = </H2/Geometry/left_shoulder_roll_link>
@@ -293,8 +475,17 @@ def Xform "H2" (
             float physics:upperLimit = 142.89568
         }
 
-        def PhysicsRevoluteJoint "right_shoulder_roll_joint"
+        def PhysicsRevoluteJoint "right_shoulder_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 60
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/right_shoulder_pitch_link>
             rel physics:body1 = </H2/Geometry/right_shoulder_roll_link>
@@ -306,8 +497,13 @@ def Xform "H2" (
             float physics:upperLimit = 29.621918
         }
 
-        def PhysicsSphericalJoint "right_waist_loop_rod_joint"
+        def PhysicsSphericalJoint "right_waist_loop_rod_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0017453292
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/torso_constraint_R_link>
             rel physics:body1 = </H2/Geometry/right_waist_loop_rod>
@@ -317,8 +513,13 @@ def Xform "H2" (
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsSphericalJoint "left_waist_loop_rod_joint"
+        def PhysicsSphericalJoint "left_waist_loop_rod_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0017453292
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/torso_constraint_L_link>
             rel physics:body1 = </H2/Geometry/left_waist_loop_rod>
@@ -328,8 +529,17 @@ def Xform "H2" (
             quatf physics:localRot1 = (1, 0, 0, 0)
         }
 
-        def PhysicsRevoluteJoint "left_knee_joint"
+        def PhysicsRevoluteJoint "left_knee_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/left_hip_yaw_link>
             rel physics:body1 = </H2/Geometry/left_knee_link>
@@ -341,8 +551,17 @@ def Xform "H2" (
             float physics:upperLimit = 144.97264
         }
 
-        def PhysicsRevoluteJoint "left_knee_motor_joint"
+        def PhysicsRevoluteJoint "left_knee_motor_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/left_hip_yaw_link>
             rel physics:body1 = </H2/Geometry/left_knee_motor_link>
@@ -354,8 +573,17 @@ def Xform "H2" (
             float physics:upperLimit = 166.15776
         }
 
-        def PhysicsRevoluteJoint "right_knee_joint"
+        def PhysicsRevoluteJoint "right_knee_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/right_hip_yaw_link>
             rel physics:body1 = </H2/Geometry/right_knee_link>
@@ -367,8 +595,17 @@ def Xform "H2" (
             float physics:upperLimit = 144.97264
         }
 
-        def PhysicsRevoluteJoint "right_knee_motor_joint"
+        def PhysicsRevoluteJoint "right_knee_motor_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/right_hip_yaw_link>
             rel physics:body1 = </H2/Geometry/right_knee_motor_link>
@@ -380,8 +617,17 @@ def Xform "H2" (
             float physics:upperLimit = 166.15776
         }
 
-        def PhysicsRevoluteJoint "head_pitch_joint"
+        def PhysicsRevoluteJoint "head_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 50
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/torso_link>
             rel physics:body1 = </H2/Geometry/head_pitch_link>
@@ -393,8 +639,17 @@ def Xform "H2" (
             float physics:upperLimit = 47.99954
         }
 
-        def PhysicsRevoluteJoint "left_shoulder_pitch_joint"
+        def PhysicsRevoluteJoint "left_shoulder_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 130
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/torso_link>
             rel physics:body1 = </H2/Geometry/left_shoulder_pitch_link>
@@ -406,8 +661,17 @@ def Xform "H2" (
             float physics:upperLimit = 105.02316
         }
 
-        def PhysicsRevoluteJoint "right_shoulder_pitch_joint"
+        def PhysicsRevoluteJoint "right_shoulder_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 130
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/torso_link>
             rel physics:body1 = </H2/Geometry/right_shoulder_pitch_link>
@@ -419,8 +683,13 @@ def Xform "H2" (
             float physics:upperLimit = 105.02316
         }
 
-        def PhysicsRevoluteJoint "torso_constraint_R_joint"
+        def PhysicsRevoluteJoint "torso_constraint_R_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/torso_link>
             rel physics:body1 = </H2/Geometry/torso_constraint_R_link>
@@ -432,8 +701,13 @@ def Xform "H2" (
             float physics:upperLimit = 50.00031
         }
 
-        def PhysicsRevoluteJoint "torso_constraint_L_joint"
+        def PhysicsRevoluteJoint "torso_constraint_L_joint" (
+            prepend apiSchemas = ["NewtonJointAPI"]
+        )
         {
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/torso_link>
             rel physics:body1 = </H2/Geometry/torso_constraint_L_link>
@@ -445,8 +719,17 @@ def Xform "H2" (
             float physics:upperLimit = 50.00031
         }
 
-        def PhysicsRevoluteJoint "left_hip_yaw_joint"
+        def PhysicsRevoluteJoint "left_hip_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/left_hip_roll_link>
             rel physics:body1 = </H2/Geometry/left_hip_yaw_link>
@@ -458,8 +741,17 @@ def Xform "H2" (
             float physics:upperLimit = 161.97517
         }
 
-        def PhysicsRevoluteJoint "right_hip_yaw_joint"
+        def PhysicsRevoluteJoint "right_hip_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/right_hip_roll_link>
             rel physics:body1 = </H2/Geometry/right_hip_yaw_link>
@@ -471,8 +763,17 @@ def Xform "H2" (
             float physics:upperLimit = 161.97517
         }
 
-        def PhysicsRevoluteJoint "waist_pitch_joint"
+        def PhysicsRevoluteJoint "waist_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 180
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/waist_roll_link>
             rel physics:body1 = </H2/Geometry/torso_link>
@@ -484,8 +785,17 @@ def Xform "H2" (
             float physics:upperLimit = 30.00007
         }
 
-        def PhysicsRevoluteJoint "left_hip_roll_joint"
+        def PhysicsRevoluteJoint "left_hip_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/left_hip_pitch_link>
             rel physics:body1 = </H2/Geometry/left_hip_roll_link>
@@ -497,8 +807,17 @@ def Xform "H2" (
             float physics:upperLimit = 124.266525
         }
 
-        def PhysicsRevoluteJoint "right_hip_roll_joint"
+        def PhysicsRevoluteJoint "right_hip_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/right_hip_pitch_link>
             rel physics:body1 = </H2/Geometry/right_hip_roll_link>
@@ -510,8 +829,17 @@ def Xform "H2" (
             float physics:upperLimit = 26.782396
         }
 
-        def PhysicsRevoluteJoint "waist_roll_joint"
+        def PhysicsRevoluteJoint "waist_roll_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 180
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "X"
             rel physics:body0 = </H2/Geometry/waist_yaw_link>
             rel physics:body1 = </H2/Geometry/waist_roll_link>
@@ -523,8 +851,17 @@ def Xform "H2" (
             float physics:upperLimit = 30.00007
         }
 
-        def PhysicsRevoluteJoint "left_hip_pitch_joint"
+        def PhysicsRevoluteJoint "left_hip_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/pelvis>
             rel physics:body1 = </H2/Geometry/left_hip_pitch_link>
@@ -536,8 +873,17 @@ def Xform "H2" (
             float physics:upperLimit = 159.01985
         }
 
-        def PhysicsRevoluteJoint "right_hip_pitch_joint"
+        def PhysicsRevoluteJoint "right_hip_pitch_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 360
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Y"
             rel physics:body0 = </H2/Geometry/pelvis>
             rel physics:body1 = </H2/Geometry/right_hip_pitch_link>
@@ -549,8 +895,17 @@ def Xform "H2" (
             float physics:upperLimit = 159.01985
         }
 
-        def PhysicsRevoluteJoint "waist_yaw_joint"
+        def PhysicsRevoluteJoint "waist_yaw_joint" (
+            prepend apiSchemas = ["NewtonJointAPI", "PhysicsDriveAPI:angular"]
+        )
         {
+            float drive:angular:physics:damping = 0
+            float drive:angular:physics:maxForce = 120
+            float drive:angular:physics:stiffness = 0
+            uniform token drive:angular:physics:type = "force"
+            custom float newton:armature = 0.01
+            custom float newton:damping = 0.0008726646
+            custom float newton:friction = 0.2
             uniform token physics:axis = "Z"
             rel physics:body0 = </H2/Geometry/pelvis>
             rel physics:body1 = </H2/Geometry/waist_yaw_link>

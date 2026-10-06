@@ -29,6 +29,7 @@ provenance, and asset-entrypoint details, see the
 
 ## Changelog
 
+- 2026-10-06: Preserved joint dynamics and motor effort limits in Newton's default USD import, shared visual/collision mesh definitions, marked collision-only geometry as guides, and documented the source snapshot storage tradeoff.
 - 2026-09-29: Added the structured Unitree H2 USD asset with six explicit
   Newton-compatible loop joints.
 

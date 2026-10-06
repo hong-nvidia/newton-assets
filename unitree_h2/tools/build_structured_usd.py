@@ -6,10 +6,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from pxr import Gf, Sdf, Usd, UsdGeom, UsdPhysics
-
 
 ROOT_PATH = Sdf.Path("/H2")
 GEOMETRY_PATH = ROOT_PATH.AppendChild("Geometry")
@@ -21,6 +21,16 @@ PHYSICS_PREFIXES = ("physics:", "newton:", "physx:", "material:binding:physics")
 MUJOCO_PREFIXES = ("mjc:",)
 PHYSICS_APIS = ("Physics", "Newton", "Physx", "MaterialBinding")
 MUJOCO_APIS = ("Mjc",)
+INSTANCE_PREFIXES = (
+    "xformOp:",
+    "xformOpOrder",
+    "material:binding",
+    "purpose",
+    "visibility",
+    "primvars:displayColor",
+    "primvars:displayOpacity",
+)
+INSTANCE_METADATA = ("displayName", "documentation", "customData")
 
 
 def _stage_metadata(stage: Usd.Stage) -> None:
@@ -71,7 +81,12 @@ def _copy_properties(
     """Copy authored properties whose names begin with selected prefixes."""
     for prop in source_prim.GetAuthoredProperties():
         if prop.GetName().startswith(prefixes):
-            Sdf.CopySpec(source_layer, prop.GetPath(), target_layer, target_prim.GetPath().AppendProperty(prop.GetName()))
+            Sdf.CopySpec(
+                source_layer,
+                prop.GetPath(),
+                target_layer,
+                target_prim.GetPath().AppendProperty(prop.GetName()),
+            )
 
 
 def _flatten_bodies_and_joints(source: Path, output: Path) -> Usd.Stage:
@@ -86,7 +101,10 @@ def _flatten_bodies_and_joints(source: Path, output: Path) -> Usd.Stage:
         raise RuntimeError("Source stage has no default prim")
     source_root_path = source_root.GetPath()
     editor = Usd.NamespaceEditor(stage)
-    if not editor.MovePrimAtPath(source_root_path, ROOT_PATH) or not editor.ApplyEdits():
+    if (
+        not editor.MovePrimAtPath(source_root_path, ROOT_PATH)
+        or not editor.ApplyEdits()
+    ):
         raise RuntimeError(f"Could not rename source root to {ROOT_PATH}")
     root = stage.GetPrimAtPath(ROOT_PATH)
     stage.SetDefaultPrim(root)
@@ -98,10 +116,14 @@ def _flatten_bodies_and_joints(source: Path, output: Path) -> Usd.Stage:
 
     names = [p.GetName() for p in bodies]
     if len(names) != len(set(names)):
-        raise RuntimeError("Rigid-body names are not unique; flattening would be ambiguous")
+        raise RuntimeError(
+            "Rigid-body names are not unique; flattening would be ambiguous"
+        )
 
     # Move leaves first so every body becomes a direct child of Geometry.
-    for old_path in sorted(body_world, key=lambda value: value.count("/"), reverse=True):
+    for old_path in sorted(
+        body_world, key=lambda value: value.count("/"), reverse=True
+    ):
         prim = stage.GetPrimAtPath(old_path)
         if not prim:
             continue
@@ -109,10 +131,15 @@ def _flatten_bodies_and_joints(source: Path, output: Path) -> Usd.Stage:
         if prim.GetPath() == destination:
             continue
         editor = Usd.NamespaceEditor(stage)
-        if not editor.MovePrimAtPath(prim.GetPath(), destination) or not editor.ApplyEdits():
+        if (
+            not editor.MovePrimAtPath(prim.GetPath(), destination)
+            or not editor.ApplyEdits()
+        ):
             raise RuntimeError(f"Could not move {old_path} to {destination}")
 
-    geometry_world = UsdGeom.XformCache().GetLocalToWorldTransform(stage.GetPrimAtPath(GEOMETRY_PATH))
+    geometry_world = UsdGeom.XformCache().GetLocalToWorldTransform(
+        stage.GetPrimAtPath(GEOMETRY_PATH)
+    )
     for old_path, world in body_world.items():
         destination = GEOMETRY_PATH.AppendChild(Sdf.Path(old_path).name)
         prim = stage.GetPrimAtPath(destination)
@@ -129,7 +156,10 @@ def _flatten_bodies_and_joints(source: Path, output: Path) -> Usd.Stage:
     for joint in joints:
         destination = JOINTS_PATH.AppendChild(joint.GetName())
         editor = Usd.NamespaceEditor(stage)
-        if not editor.MovePrimAtPath(joint.GetPath(), destination) or not editor.ApplyEdits():
+        if (
+            not editor.MovePrimAtPath(joint.GetPath(), destination)
+            or not editor.ApplyEdits()
+        ):
             raise RuntimeError(f"Could not move {joint.GetPath()} to {destination}")
 
     stage.GetRootLayer().Save()
@@ -142,26 +172,38 @@ def _build_geometry(flat: Usd.Stage, payload: Path) -> None:
     library = Usd.Stage.CreateNew(str(library_path))
     library.DefinePrim("/Geometry", "Scope")
     meshes = [p for p in flat.Traverse() if p.IsA(UsdGeom.Mesh)]
-    mesh_names: set[str] = set()
-    for index, mesh in enumerate(meshes):
-        name = f"mesh_{index:03d}_{mesh.GetName()}"
-        if name in mesh_names:
-            raise RuntimeError(f"Duplicate mesh library name: {name}")
-        mesh_names.add(name)
-        library_prim_path = Sdf.Path("/Geometry").AppendChild(name)
-        Sdf.CopySpec(flat.GetRootLayer(), mesh.GetPath(), library.GetRootLayer(), library_prim_path)
-        library_prim = library.GetPrimAtPath(library_prim_path)
-        for prop in list(library_prim.GetAuthoredProperties()):
-            if prop.GetName().startswith(PHYSICS_PREFIXES + MUJOCO_PREFIXES):
-                library_prim.RemoveProperty(prop.GetName())
-        _set_api_names(
-            library_prim,
-            [
-                api
-                for api in _authored_api_names(library_prim)
-                if not api.startswith(PHYSICS_APIS + MUJOCO_APIS)
-            ],
+    shared_geometry: dict[str, Sdf.Path] = {}
+    mesh_targets: dict[Sdf.Path, Sdf.Path] = {}
+    for mesh in meshes:
+        # Use a canonical prim path so names cannot prevent content sharing.
+        candidate = Usd.Stage.CreateInMemory()
+        Sdf.CopySpec(
+            flat.GetRootLayer(),
+            mesh.GetPath(),
+            candidate.GetRootLayer(),
+            Sdf.Path("/Mesh"),
         )
+        shared_mesh = candidate.GetPrimAtPath("/Mesh")
+        for prop in list(shared_mesh.GetAuthoredProperties()):
+            if prop.GetName().startswith(
+                PHYSICS_PREFIXES + MUJOCO_PREFIXES + INSTANCE_PREFIXES
+            ):
+                shared_mesh.RemoveProperty(prop.GetName())
+        _set_api_names(shared_mesh, [])
+        for field in INSTANCE_METADATA:
+            shared_mesh.ClearMetadata(field)
+        key = candidate.GetRootLayer().ExportToString()
+        if key not in shared_geometry:
+            name = f"mesh_{len(shared_geometry):03d}_{mesh.GetName()}"
+            target = Sdf.Path("/Geometry").AppendChild(name)
+            Sdf.CopySpec(
+                candidate.GetRootLayer(),
+                Sdf.Path("/Mesh"),
+                library.GetRootLayer(),
+                target,
+            )
+            shared_geometry[key] = target
+        mesh_targets[mesh.GetPath()] = shared_geometry[key]
     library.GetRootLayer().Save()
 
     geometry_path = payload / "Geometry.usda"
@@ -174,28 +216,98 @@ def _build_geometry(flat: Usd.Stage, payload: Path) -> None:
 
     for prim in list(geometry.Traverse()):
         if prim.IsA(UsdGeom.Mesh):
-            source_index = next(i for i, p in enumerate(meshes) if str(p.GetPath()) == str(prim.GetPath()))
-            name = f"mesh_{source_index:03d}_{prim.GetName()}"
             path = prim.GetPath()
+            source_mesh = flat.GetPrimAtPath(path)
             geometry.RemovePrim(path)
             instance = geometry.DefinePrim(path, "Mesh")
-            instance.GetReferences().AddReference("./GeometryLibrary.usdc", Sdf.Path("/Geometry").AppendChild(name))
+            for field in INSTANCE_METADATA:
+                if source_mesh.HasAuthoredMetadata(field):
+                    instance.SetMetadata(field, source_mesh.GetMetadata(field))
+            instance.GetReferences().AddReference(
+                "./GeometryLibrary.usdc", mesh_targets[path]
+            )
+            _copy_properties(
+                flat.GetRootLayer(),
+                source_mesh,
+                geometry.GetRootLayer(),
+                instance,
+                INSTANCE_PREFIXES,
+            )
+            _set_api_names(
+                instance,
+                [
+                    api
+                    for api in _authored_api_names(source_mesh)
+                    if not api.startswith(PHYSICS_APIS + MUJOCO_APIS)
+                ],
+            )
             continue
         for prop in list(prim.GetAuthoredProperties()):
             if prop.GetName().startswith(PHYSICS_PREFIXES + MUJOCO_PREFIXES):
                 prim.RemoveProperty(prop.GetName())
         _set_api_names(
             prim,
-            [name for name in _authored_api_names(prim) if not name.startswith(PHYSICS_APIS + MUJOCO_APIS)],
+            [
+                name
+                for name in _authored_api_names(prim)
+                if not name.startswith(PHYSICS_APIS + MUJOCO_APIS)
+            ],
         )
+    # Collision-only shapes are guides, including analytic shapes. Shared
+    # visual meshes remain visible; collision APIs stay in the Physics layer.
+    for prim in geometry.Traverse():
+        source_prim = flat.GetPrimAtPath(prim.GetPath())
+        if source_prim.HasAPI(UsdPhysics.CollisionAPI) and UsdGeom.Imageable(prim):
+            UsdGeom.Imageable(prim).CreatePurposeAttr(UsdGeom.Tokens.guide)
     geometry.GetRootLayer().Save()
+
+
+def _author_newton_joint_dynamics(source: Usd.Prim, target: Usd.Prim) -> None:
+    """Mirror MuJoCo joint dynamics for Newton's default schema resolver."""
+    attributes = {
+        "mjc:armature": "newton:armature",
+        "mjc:frictionloss": "newton:friction",
+        "mjc:damping": "newton:damping",
+    }
+    authored = False
+    for mjc_name, newton_name in attributes.items():
+        attr = source.GetAttribute(mjc_name)
+        if not attr or not attr.HasAuthoredValue():
+            continue
+        value = attr.Get()
+        if mjc_name == "mjc:damping" and not source.IsA(UsdPhysics.PrismaticJoint):
+            # Newton's USD damping is per degree; MuJoCo's is per radian.
+            value *= math.pi / 180.0
+        target.CreateAttribute(newton_name, Sdf.ValueTypeNames.Float).Set(value)
+        authored = True
+    if authored:
+        _set_api_names(target, _authored_api_names(target) + ["NewtonJointAPI"])
+
+    lower = source.GetAttribute("mjc:actuatorfrcrange:min").Get()
+    upper = source.GetAttribute("mjc:actuatorfrcrange:max").Get()
+    if lower is None or upper is None or lower >= upper:
+        return
+    if lower != -upper:
+        raise ValueError(
+            f"Cannot represent asymmetric effort range on {source.GetPath()}"
+        )
+    # Zero gains preserve effort actuation without adding a position servo or
+    # conflating passive damping with drive damping. Passive joints have no drive.
+    drive_name = "linear" if source.IsA(UsdPhysics.PrismaticJoint) else "angular"
+    drive = UsdPhysics.DriveAPI.Apply(target, drive_name)
+    drive.CreateTypeAttr(UsdPhysics.Tokens.force)
+    drive.CreateStiffnessAttr(0.0)
+    drive.CreateDampingAttr(0.0)
+    drive.CreateMaxForceAttr(upper)
 
 
 def _build_materials(flat: Usd.Stage, payload: Path) -> None:
     """Extract the asset's material hierarchy into its own layer."""
     stage = _new_stage(payload / "Materials.usda")
     if flat.GetPrimAtPath(MATERIALS_PATH):
-        Sdf.CopySpec(flat.GetRootLayer(), MATERIALS_PATH, stage.GetRootLayer(), MATERIALS_PATH)
+        Sdf.CopySpec(
+            flat.GetRootLayer(), MATERIALS_PATH, stage.GetRootLayer(), MATERIALS_PATH
+        )
     stage.GetRootLayer().Save()
 
 
@@ -212,14 +324,24 @@ def _build_feature_layer(
     source_layer = flat.GetRootLayer()
     if include_joints:
         Sdf.CopySpec(source_layer, JOINTS_PATH, stage.GetRootLayer(), JOINTS_PATH)
-        for joint in [p for p in stage.Traverse() if p.GetPath().HasPrefix(JOINTS_PATH)]:
+        for joint in [
+            p for p in stage.Traverse() if p.GetPath().HasPrefix(JOINTS_PATH)
+        ]:
             for prop in list(joint.GetAuthoredProperties()):
                 if prop.GetName().startswith(MUJOCO_PREFIXES):
                     joint.RemoveProperty(prop.GetName())
             _set_api_names(
                 joint,
-                [name for name in _authored_api_names(joint) if name.startswith(api_prefixes)],
+                [
+                    name
+                    for name in _authored_api_names(joint)
+                    if name.startswith(api_prefixes)
+                ],
             )
+            if joint.IsA(UsdPhysics.Joint):
+                _author_newton_joint_dynamics(
+                    flat.GetPrimAtPath(joint.GetPath()), joint
+                )
     if include_actuators:
         stage.DefinePrim(PHYSICS_PATH, "Scope")
     for prim in flat.Traverse():
@@ -227,10 +349,16 @@ def _build_feature_layer(
             continue
         if prim.GetTypeName() == "MjcActuator":
             if include_actuators:
-                Sdf.CopySpec(source_layer, prim.GetPath(), stage.GetRootLayer(), prim.GetPath())
+                Sdf.CopySpec(
+                    source_layer, prim.GetPath(), stage.GetRootLayer(), prim.GetPath()
+                )
             continue
-        properties = [p for p in prim.GetAuthoredProperties() if p.GetName().startswith(prefixes)]
-        apis = [name for name in _authored_api_names(prim) if name.startswith(api_prefixes)]
+        properties = [
+            p for p in prim.GetAuthoredProperties() if p.GetName().startswith(prefixes)
+        ]
+        apis = [
+            name for name in _authored_api_names(prim) if name.startswith(api_prefixes)
+        ]
         if not properties and not apis:
             continue
         if prim.GetPath().HasPrefix(PHYSICS_PATH):
@@ -244,12 +372,18 @@ def _build_feature_layer(
         scene.CreateGravityDirectionAttr(Gf.Vec3f(0, 0, -1))
         scene.CreateGravityMagnitudeAttr(9.81)
         _set_api_names(scene.GetPrim(), ["NewtonSceneAPI"])
-        scene.GetPrim().CreateAttribute("newton:maxSolverIterations", Sdf.ValueTypeNames.Int).Set(100)
-        scene.GetPrim().CreateAttribute("newton:timeStepsPerSecond", Sdf.ValueTypeNames.Int).Set(500)
+        scene.GetPrim().CreateAttribute(
+            "newton:maxSolverIterations", Sdf.ValueTypeNames.Int
+        ).Set(100)
+        scene.GetPrim().CreateAttribute(
+            "newton:timeStepsPerSecond", Sdf.ValueTypeNames.Int
+        ).Set(500)
     elif include_actuators:
         scene = stage.OverridePrim("/PhysicsScene")
         _set_api_names(scene, ["MjcSceneAPI"])
-        scene.CreateAttribute("mjc:compiler:angle", Sdf.ValueTypeNames.Token).Set("radian")
+        scene.CreateAttribute("mjc:compiler:angle", Sdf.ValueTypeNames.Token).Set(
+            "radian"
+        )
     stage.GetRootLayer().Save()
 
 
@@ -286,9 +420,11 @@ def _write_composition(output_root: Path, flat: Usd.Stage) -> None:
     _set_api_names(root, ["GeomModelAPI"])
     root.SetAssetInfoByKey("name", "H2")
     root.GetPayloads().AddPayload("./Payload/Contents.usda")
-    bbox = UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_]).ComputeWorldBound(
-        flat.GetPrimAtPath(ROOT_PATH)
-    ).ComputeAlignedBox()
+    bbox = (
+        UsdGeom.BBoxCache(Usd.TimeCode.Default(), [UsdGeom.Tokens.default_])
+        .ComputeWorldBound(flat.GetPrimAtPath(ROOT_PATH))
+        .ComputeAlignedBox()
+    )
     root.CreateAttribute("extentsHint", Sdf.ValueTypeNames.Float3Array).Set(
         [Gf.Vec3f(bbox.GetMin()), Gf.Vec3f(bbox.GetMax())]
     )
@@ -310,8 +446,12 @@ def build(source: Path, output_root: Path) -> None:
     flat = _flatten_bodies_and_joints(source, work)
     _build_geometry(flat, payload)
     _build_materials(flat, payload)
-    _build_feature_layer(flat, payload / "Physics.usda", PHYSICS_PREFIXES, PHYSICS_APIS, True, False)
-    _build_feature_layer(flat, payload / "Mujoco.usda", MUJOCO_PREFIXES, MUJOCO_APIS, False, True)
+    _build_feature_layer(
+        flat, payload / "Physics.usda", PHYSICS_PREFIXES, PHYSICS_APIS, True, False
+    )
+    _build_feature_layer(
+        flat, payload / "Mujoco.usda", MUJOCO_PREFIXES, MUJOCO_APIS, False, True
+    )
     _build_robot(flat, payload)
     _write_composition(output_root, flat)
     work.unlink()
@@ -320,8 +460,12 @@ def build(source: Path, output_root: Path) -> None:
     files = {}
     for path in sorted(output_root.rglob("*")):
         if path.is_file() and path != manifest_path:
-            files[path.relative_to(output_root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
-    manifest_path.write_text(json.dumps({"source": source_ref, "files": files}, indent=2) + "\n")
+            files[path.relative_to(output_root).as_posix()] = hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+    manifest_path.write_text(
+        json.dumps({"source": source_ref, "files": files}, indent=2) + "\n"
+    )
 
 
 def main() -> None:
